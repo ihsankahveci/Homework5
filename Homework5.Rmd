@@ -48,23 +48,6 @@ news_df %>% glimpse
 
 
 
-```{r, eval=FALSE}
-set.seed(57)
-inds <- sample.int(nrow(news_df), size = 300, replace = F)
-train <- news_df[-inds,]
-test <- news_df[inds,]
-
-train %>% dim()
-test %>% dim()
-```
-
-```{r, eval=FALSE}
-train_dtm <- create_matrix(train$text, language="english", toLower = TRUE,                  removeNumbers=TRUE, stemWords=TRUE, removeSparseTerms=.998)
-
-test_dtm <- create_matrix(test$text, language="english", toLower = TRUE,                    removeNumbers=TRUE, stemWords=TRUE, removeSparseTerms=.998)
-```
-
-
 ```{r}
 news_dtm <- create_matrix(news_df$text, language="english", toLower = TRUE,                    removeNumbers=TRUE, stemWords=TRUE, removeSparseTerms=.998)
 ```
@@ -102,7 +85,7 @@ doc_summary <- analytics@document_summary
 Confusion matrix (not part of RTextTools)
 
 ```{r}
-install.packages("caret")
+#install.packages("caret")
 library(caret)
 
 confusion <- confusionMatrix(data = factor(analytics@document_summary$SVM_LABEL),
