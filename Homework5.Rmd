@@ -1,0 +1,124 @@
+---
+title: "Classification "
+subtitle: "Homework 5"
+author: "Ihsan Kahveci, Megan Erickson, Nicholas Wittstock"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+```{r, message=FALSE}
+library(RTextTools)
+library(tidyverse)
+library(tm)
+```
+
+
+```{r, message=FALSE}
+fakes = read_csv("./Fakenews-1500.csv") %>%
+          purrr::discard(~all(is.na(.)))
+
+trues = read_csv("./TrueNews-1500.csv") %>%
+          purrr::discard(~all(is.na(.)))      
+
+dim(fakes)
+dim(trues)
+```
+
+```{r}
+trues %>% glimpse()
+fakes %>% glimpse()
+```
+
+
+
+```{r}
+trues <- trues %>% drop_na() %>% mutate(label = "true") %>% select(-Random)
+fakes <- fakes %>% mutate(label = "fake")
+```
+
+```{r}
+news_df = rbind(trues, fakes)
+news_df$date <- news_df$date %>% lubridate::as_date()
+news_df %>% glimpse
+```
+
+
+
+```{r, eval=FALSE}
+set.seed(57)
+inds <- sample.int(nrow(news_df), size = 300, replace = F)
+train <- news_df[-inds,]
+test <- news_df[inds,]
+
+train %>% dim()
+test %>% dim()
+```
+
+```{r, eval=FALSE}
+train_dtm <- create_matrix(train$text, language="english", toLower = TRUE,                  removeNumbers=TRUE, stemWords=TRUE, removeSparseTerms=.998)
+
+test_dtm <- create_matrix(test$text, language="english", toLower = TRUE,                    removeNumbers=TRUE, stemWords=TRUE, removeSparseTerms=.998)
+```
+
+
+```{r}
+news_dtm <- create_matrix(news_df$text, language="english", toLower = TRUE,                    removeNumbers=TRUE, stemWords=TRUE, removeSparseTerms=.998)
+```
+
+```{r}
+set.seed(57)
+inds <- sample.int(nrow(news_df), size = 300, replace = F)
+container <- create_container(matrix = news_dtm, 
+                              labels = news_df$label,
+                              trainSize=c(1:2999)[-inds],
+                              testSize=inds, 
+                              virgin=FALSE)
+```
+
+```{r}
+container@training_codes %>% length()
+container@testing_codes %>% length()
+```
+
+
+```{r}
+SVM <- train_model(container,"SVM")
+SVM_CLASSIFY <- classify_model(container, SVM)
+```
+
+```{r}
+#COMPUTE ANALYTICS
+analytics <- create_analytics(container,cbind(SVM_CLASSIFY))
+topic_summary <- analytics@label_summary
+alg_summary <- analytics@algorithm_summary
+doc_summary <- analytics@document_summary 
+```
+
+
+Confusion matrix (not part of RTextTools)
+
+```{r}
+install.packages("caret")
+library(caret)
+
+confusion <- confusionMatrix(data = factor(analytics@document_summary$SVM_LABEL),
+                reference = factor(analytics@document_summary$MANUAL_CODE))
+```
+
+## OUTPUT THE RESULTS
+```{r}
+setwd(paste0(getwd(), "/first"))
+```
+
+make sure you know where the output is going
+
+
+```{r}
+write.csv(analytics@algorithm_summary, "AlgorithmSummary.csv") #precision, recall, f-score
+write.csv(analytics@document_summary, "DocumentSummary.csv") #individual document predictions (could be used to contruct confusion matrix)
+write.csv(confusion[["table"]], "confusion.csv")
+```
